@@ -30,7 +30,7 @@ NumResponses = 2;
 Layers = [ ...
     sequenceInputLayer(InputSize)
     gruLayer(NumHiddenUnits,'OutputMode','sequence')
-    dropoutLayer(0.2)
+    %dropoutLayer(0.2)
     fullyConnectedLayer(NumResponses)
     regressionLayer];
 
@@ -57,14 +57,14 @@ Options = trainingOptions('adam',...
 Net = trainNetwork(XTrain,YTrain,Layers,Options);
 
 %% Plot CSI Result
-YPred = predict(Net,XValid,'MiniBatchSize',MiniBatchSize);
+YPred = predict(Net,XTrain,'MiniBatchSize',MiniBatchSize);
 y = cell2mat(YPred);
 figure('Name','Predict Diagram');
 plot(1:size(y,1)/2,y(1:2:end),'r','LineWidth',1); hold on;
 plot(1:size(y,1)/2,y(2:2:end),'b','LineWidth',1); hold off;
 legend('Real(PredH)','Imag(PredH)');
 
-y = cell2mat(YValid);
+y = cell2mat(YTrain);
 figure('Name','Valid Diagram');
 plot(1:size(y,1)/2,y(1:2:end),'m','LineWidth',1); hold on;
 plot(1:size(y,1)/2,y(2:2:end),'c','LineWidth',1); hold off;

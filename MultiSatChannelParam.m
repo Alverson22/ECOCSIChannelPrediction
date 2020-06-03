@@ -9,7 +9,7 @@ clear all;
 
 %% Number of dataset
 csv = dir('data\*.csv');
-NumCSV = 1;%length(csv);
+NumCSV = length(csv);
 
 %% Load STK Link Information
 

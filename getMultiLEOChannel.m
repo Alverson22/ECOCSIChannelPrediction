@@ -1,4 +1,4 @@
-function [ReceivedPacket,h] = getMultiLEOChannel(TransmittedFrame,LengthCP,h,n)
+function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,n)
 % This function is to model the transmission and reception process in OFDM systems. 
 
 % Extract parameters
@@ -34,7 +34,7 @@ for p = 1:NumPacket
     x = x2(:);
     
     % 4. Adding Free Space Path loss and Shadow Fading
-    pathloss = FSPL(p) + SFMrkv(EAngle(p), isLOS) - AGain;
+    pathloss = FSPL(p) - AGain;% + SFMrkv(EAngle(p), isLOS) - AGain;
     variance = 10^(-pathloss/10);
     h_PL = sqrt(variance/2) * h;
     

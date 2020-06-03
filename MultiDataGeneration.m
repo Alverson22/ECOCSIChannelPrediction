@@ -58,7 +58,7 @@ idxSC = 26;
 %% Training data generation
 
 % Size of dataset to be defined
-NumPacket = 10000; % Number of packets per LEO track
+NumPacket = 40000; % Number of packets per LEO track
 
 % Training time step length
 TrainingTimeStep = 100;
@@ -98,6 +98,7 @@ TransmittedPacket = [PilotSym;DataSym];
 % NormCSI is to determined wheather CSI should be Nomalized
 Mode = 'S';
 NormCSI = true;
+NumCSV = 1;
 
 for n = 1:NumCSV
     % Received frame
@@ -141,4 +142,4 @@ YValid = Y(NumSample*TrainSize+1:end);
 
 save('TrainingData.mat','XTrain','YTrain','TrainingTimeStep','DimFeature');
 save('ValidationData.mat','XValid','YValid');
-save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','NumCSV','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
+save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','NumCSV','Mode','NormCSI','idxSC','h','LengthCP','FixedPilot','PowerVar'); 

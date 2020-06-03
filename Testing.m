@@ -21,11 +21,10 @@ NumPilot = length(FixedPilot);
 PilotSpacing = NumSC/NumPilot;
 NumOFDMsym = NumPilotSym+NumDataSym;
 
-Mod_Constellation = [1+1j 1-1j -1+1j -1-1j];
-c = numel(Mod_Constellation);
-Label = length(c);
+Mod_Constellation = [1+1j;1-1j;-1+1j;-1-1j];
+NumClass = numel(Mod_Constellation);
+Label = 1:NumClass;
 
-NumClass = length(Label);
 NumPath = length(h);
 
 %% SNR range
@@ -33,7 +32,7 @@ NumPath = length(h);
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
 
-Eb_N0_dB = 30;% Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
+Eb_N0_dB = Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
 NoiseVar = RcvrPower./Eb_N0;
@@ -66,49 +65,41 @@ for i = 1:NumIter
         PilotSym(1:PilotSpacing:end) = FixedPilotAll;
     
         % Data symbol
-        DataSym = sqrt(PowerVar/2)/sqrt(2)*complex(sign(rand(NumDataSym,NumSC,NumPacket)-0.5),sign(rand(NumDataSym,NumSC,NumPacket)-0.5)); 
+        DataSym = sqrt(PowerVar/2)*complex(sign(rand(NumDataSym,NumSC,NumPacket)-0.5),sign(rand(NumDataSym,NumSC,NumPacket)-0.5)); 
     
         % Transmitted frame
         TransmittedPacket = [PilotSym;DataSym];
         
         % Received frame
-        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,noiseVar,2);
+        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,1);
         
         % Channel Estimation
         wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
         ReceivedPilot = mat2cell(ReceivedPacket(1,:,:),1,NumSC,ones(1,NumPacket));
-        PilotSeq = mat2cell(FixedPilotAll,1,1,NumPacket);
-        EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeqm,'UniformOutput',false);
+        PilotSeq = mat2cell(FixedPilotAll,1,NumPilot,ones(1,NumPacket));
+        EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
         EstChanLS = cell2mat(squeeze(EstChanLSCell));
         
-        [feature,result,DimFeature,~] = ...
+        [feature,~,DimFeature,NumTestingSample] = ...
         getTrainingFeatureAndLabel(Mode,NormCSI,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
         featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
-        resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
+        XTest = featureVec.';
         
         % Collect the data labels for the selected subcarrier
-        DataLabel = zeros(size(DataSym(:,idxSC,:)));
+        DataLabel = zeros(size(DataSym(:,idxSC,TrainingTimeStep+1:end)));
         for c = 1:NumClass
-            DataLabel(logical(DataSym(:,idxSC,:) == 1/sqrt(2)*Mod_Constellation(c))) = Label(c);
+            DataLabel(logical(DataSym(:,idxSC,TrainingTimeStep+1:end) == sqrt(PowerVar/2)*Mod_Constellation(c))) = Label(c);
         end
         DataLabel = squeeze(DataLabel); 
 
-        % Testing data collection
-        XTest = cell(NumPacket,1);
-        YTest = zeros(NumPacket,1);       
-        for c = 1:NumClass
-            [feature,label,idx] = getFeatureAndLabel(real(ReceivedPacket),imag(ReceivedPacket),DataLabel,Label(c));
-            featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2))); 
-            XTest(idx) = featureVec;
-            YTest(idx) = label;
-        end
-        YTest = categorical(YTest);
+        % Data symbol collection
+        ReceivedDataSymbol = ReceivedPacket(2,idxSC,TrainingTimeStep+1:end);
         
-        %% 2. DL detection
-        
-        YPred = classify(Net,XTest,'MiniBatchSize',MiniBatchSize);
-        SER_GRU(snr,i) = 1-sum(YPred == YTest)/NumPacket;
+        %% 2. CSI Prediction
+        YPred = predict(Net,XTest,'MiniBatchSize',MiniBatchSize);
+        EsChanGRU = CSIConverter(YPred,NumTestingSample);
+        SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EsChanGRU,Mod_Constellation,Label,DataLabel);
     end
     
 end
@@ -117,11 +108,8 @@ SER_GRU = mean(SER_GRU,2).';
 
 
 figure();
-semilogy(Es_N0_dB,SER_DL,'r-o','LineWidth',2,'MarkerSize',10);hold on;
-semilogy(Es_N0_dB,SER_LS,'b-o','LineWidth',2,'MarkerSize',10);hold off;
-% semilogy(Es_N0_dB,SER_MMSE,'k-o','LineWidth',2,'MarkerSize',10);hold off;
-% legend('Deep learning (DL)','Least square (LS)','Minimum mean square error (MMSE)');
-legend('Deep learning (DL)','Least square (LS)');
+semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
+legend('Gate Reccurnet Units (GRU)');
 xlabel('Es/N0 (dB)');
 ylabel('Symbol error rate (SER)');
 
@@ -141,6 +129,17 @@ for c = 1:length(Mod_Constellation)
 end
 
 SER = 1-sum(DecLabel == DataLabel)/length(EstSym);
+
+end
+
+function EstChanGRU = CSIConverter(PredictedCSI,NumTestingSample)
+% This function is to reconstruct the CSI from GRU prediction
+    EstChanGRU = zeros(NumTestingSample,1);
+    CSI = cell2mat(PredictedCSI);
+    
+    for n = 1:NumTestingSample
+       EstChanGRU(n) = complex(CSI(n*2-1),CSI(n*2));
+    end
 
 end
 
