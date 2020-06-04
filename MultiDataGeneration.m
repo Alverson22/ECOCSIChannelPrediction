@@ -31,7 +31,8 @@ LengthCP = 16; % The length of the cyclic prefix
 % The channel matrix generated using the 3GPP TR38.901 channel model of the
 % writer's own implementation, which is saved and loaded:
 load('SavedChan.mat'); 
-load('DataIteration.mat');
+load('NoiseParam.mat');
+% load('DataIteration.mat');
 
 % One can replace the 3GPP channel with the narrowband Rayleigh fading channel:  
 % h = 1/sqrt(2)*complex(randn(NumPath,1),randn(NumPath,1)); 
@@ -43,6 +44,15 @@ H = fft(h,NumSC,1);
 TransmitterPower_dB = 60; % dBm
 LNAGain_dB = 35; % dBm
 PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
+
+%% SNR calculation
+
+Eb_N0_dB = cell2mat(Eb_N0_dB);
+RcvrPower_dB = cell2mat(RcvrPower_dB);
+
+Eb_N0 = 10.^(Eb_N0_dB./10);
+RcvrPower = 10.^(RcvrPower_dB./10);
+NoiseVar = RcvrPower./Eb_N0;
 
 %% Subcarrier selection
 
@@ -58,7 +68,7 @@ idxSC = 26;
 %% Training data generation
 
 % Size of dataset to be defined
-NumPacket = 40000; % Number of packets per LEO track
+NumPacket = 10000; % Number of packets per LEO track
 
 % Training time step length
 TrainingTimeStep = 100;
@@ -95,14 +105,13 @@ TransmittedPacket = [PilotSym;DataSym];
 %% Get training feature 
 % Mode = S, only CSI signal
 % Mode = SN, CSI signal followed by noise
-% NormCSI is to determined wheather CSI should be Nomalized
 Mode = 'S';
-NormCSI = true;
-NumCSV = 1;
+% Select CSI File
+NumCSV = [1 2];
 
-for n = 1:NumCSV
+for n = NumCSV
     % Received frame
-    ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,n);
+    ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,n);
 
     % LS Channel Estimation
     wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -112,7 +121,7 @@ for n = 1:NumCSV
     EstChanLS = cell2mat(squeeze(EstChanLSCell));
 
     [feature,result,DimFeature,NumTrainingSample] = ...
-        getTrainingFeatureAndLabel(Mode,NormCSI,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
+        getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
     featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
     resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
@@ -129,7 +138,7 @@ Y = Y.';
 TrainSize = 4/5;
 ValidSize = 1/5;
 
-NumSample = NumTrainingSample * NumCSV;
+NumSample = NumTrainingSample * length(NumCSV);
 
 % Training data
 XTrain = X(1:NumSample*TrainSize);
@@ -142,4 +151,5 @@ YValid = Y(NumSample*TrainSize+1:end);
 
 save('TrainingData.mat','XTrain','YTrain','TrainingTimeStep','DimFeature');
 save('ValidationData.mat','XValid','YValid');
-save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','NumCSV','Mode','NormCSI','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
+save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','Mode','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
+

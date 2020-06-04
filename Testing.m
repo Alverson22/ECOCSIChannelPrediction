@@ -27,7 +27,7 @@ Label = 1:NumClass;
 
 NumPath = length(h);
 
-%% SNR range
+%% SNR caculation
 
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
@@ -71,7 +71,7 @@ for i = 1:NumIter
         TransmittedPacket = [PilotSym;DataSym];
         
         % Received frame
-        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,1);
+        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,2);
         
         % Channel Estimation
         wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -80,10 +80,12 @@ for i = 1:NumIter
         EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
         EstChanLS = cell2mat(squeeze(EstChanLSCell));
         
-        [feature,~,DimFeature,NumTestingSample] = ...
-        getTrainingFeatureAndLabel(Mode,NormCSI,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
+        [feature,result,DimFeature,NumTestingSample] = ...
+        getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
         featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
+        resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
+        
         XTest = featureVec.';
         
         % Collect the data labels for the selected subcarrier
@@ -98,6 +100,7 @@ for i = 1:NumIter
         
         %% 2. CSI Prediction
         YPred = predict(Net,XTest,'MiniBatchSize',MiniBatchSize);
+        plotCSI(YPred,resultVec',Eb_N0_dB(snr));
         EsChanGRU = CSIConverter(YPred,NumTestingSample);
         SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EsChanGRU,Mod_Constellation,Label,DataLabel);
     end
@@ -105,7 +108,6 @@ for i = 1:NumIter
 end
 
 SER_GRU = mean(SER_GRU,2).';
-
 
 figure();
 semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
@@ -133,14 +135,24 @@ SER = 1-sum(DecLabel == DataLabel)/length(EstSym);
 end
 
 function EstChanGRU = CSIConverter(PredictedCSI,NumTestingSample)
-% This function is to reconstruct the CSI from GRU prediction
+% This function is to reconstruct and denormalized the CSI from GRU prediction to complex-valued
+    load('Normalized.mat');
     EstChanGRU = zeros(NumTestingSample,1);
     CSI = cell2mat(PredictedCSI);
     
     for n = 1:NumTestingSample
-       EstChanGRU(n) = complex(CSI(n*2-1),CSI(n*2));
+        CSI_Real = CSI(n*2-1) * RealData_STD + RealData_MEAN;
+        CSI_Imag = CSI(n*2) * ImagData_STD + ImagData_MEAN;
+       EstChanGRU(n) = complex(CSI_Real,CSI_Imag);
     end
 
+end
+
+function RMSE = getRMSE(YPred, YValid)
+    predict = cell2mat(YPred);
+    valid = cell2mat(YValid);
+    MSE = mean((predict-valid).^2);
+    RMSE = sqrt(MSE);
 end
 
 

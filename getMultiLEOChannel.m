@@ -1,14 +1,11 @@
-function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,n)
+function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,NoiseVar,n)
 % This function is to model the transmission and reception process in OFDM systems. 
 
 % Extract parameters
 [NumSym,NumSC,NumPacket] = size(TransmittedFrame);
 load('SatChannelParam.mat');
-load('NoiseParam.mat');
 %% Extract data
 
-Eb_N0_dB = cell2mat(Eb_N0_dB(n));
-RcvrPower_dB = cell2mat(RcvrPower_dB(n));
 FSPL = cell2mat(FSPL(n));
 AAngle = cell2mat(AAngle(n));
 EAngle = cell2mat(EAngle(n));
@@ -45,13 +42,9 @@ end
                         
 %% Adding noise 
 
-Eb_N0 = 10.^(Eb_N0_dB./10); % (STK SNR parameter)
-RcvrPower = 10.^(RcvrPower_dB./10);
-NoiseVar = RcvrPower./Eb_N0;
-
 SeqLength = size(y,1);
 
-NoiseF = sqrt(NoiseVar/2).*(randn(NumPacket,NumSC)+1j*randn(NumPacket,NumSC)); % Frequency-domain noise
+NoiseF = sqrt(NoiseVar(n)/2).*(randn(NumPacket,NumSC)+1j*randn(NumPacket,NumSC)); % Frequency-domain noise
 NoiseT = sqrt(SeqLength)*sqrt(SeqLength/NumSC)*ifft(NoiseF,SeqLength,2); % Time-domain noise
 NoiseT = NoiseT.';
 % Adding noise

@@ -1,4 +1,4 @@
-function [feature,result,DimFeature,NumTrainingSample] = getTrainingFeatureAndLabel(Mode,NormCSI,RealData,ImagData,TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC)
+function [feature,result,DimFeature,NumTrainingSample] = getTrainingFeatureAndLabel(Mode,RealData,ImagData,TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC)
 % This function is to
 %   1. transform the received OFDM packets to feature vectors for training
 %      data collection;
@@ -8,13 +8,13 @@ function [feature,result,DimFeature,NumTrainingSample] = getTrainingFeatureAndLa
 NumTrainingSample = floor((size(RealData,1) - (TrainingTimeStep+PredictTimeStep-1)) / TrainingDataInterval);
 
 % Data Collection
-if NormCSI
-    RealPart = normalize(RealData);
-    ImagPart = normalize(ImagData);
-else
-    RealPart = RealData;
-    ImagPart = ImagData;
-end
+% The LEO CSI need to be normalized to allow GRU learning model to learn
+RealData_MEAN = mean(RealData);
+RealData_STD = std(RealData);
+RealPart = (RealData-RealData_MEAN) / RealData_STD;
+ImagData_MEAN = mean(ImagData);
+ImagData_STD = std(ImagData);
+ImagPart = (ImagData-ImagData_MEAN) / ImagData_STD;
 
 % Generating training sequence only CSI signal
 if Mode == 'S'
@@ -60,6 +60,8 @@ elseif Mode == 'SN'
     end
 
 end
+
+save('Normalized.mat','RealData_MEAN','RealData_STD','ImagData_MEAN','ImagData_STD');
 
 end
 
