@@ -49,7 +49,6 @@ PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
 
 Eb_N0_dB = cell2mat(Eb_N0_dB);
 RcvrPower_dB = cell2mat(RcvrPower_dB);
-
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB./10);
 NoiseVar = RcvrPower./Eb_N0;
@@ -119,14 +118,20 @@ for n = NumCSV
     PilotSeq = mat2cell(FixedPilotAll,1,NumPilot,ones(1,NumPacket));
     EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
     EstChanLS = cell2mat(squeeze(EstChanLSCell));
-
+    
+    % plotCSI(EstChanLS,n);
+    
+    % CSI feature extraction will normalize orginal CSI value
     [feature,result,DimFeature,NumTrainingSample] = ...
         getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
     featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
     resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
     X = [X featureVec];
-    Y = [Y resultVec];
+    Y = [Y resultVec]; 
+    
+    % plotNormCSI(resultVec',NumCSV);
+    
 end
 
 %% Training Data Collection

@@ -32,14 +32,14 @@ NumPath = length(h);
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
 
-Eb_N0_dB = Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
+Eb_N0_dB = Eb_N0_dB_MAX-25:2:Eb_N0_dB_MAX-10; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
 NoiseVar = RcvrPower./Eb_N0;
 
 %% Testing data size
 
-NumPacket = 10000; % Number of packets simulated per iteration
+NumPacket = 20000; % Number of packets simulated per iteration
 
 %% Simulation
 
@@ -51,6 +51,9 @@ NumIter = 1;
 
 % Initialize error rate vectors
 SER_GRU = zeros(length(NoiseVar),NumIter);
+
+% Testing LEO Track CSV number
+NumCSV = 3;
 
 for i = 1:NumIter
     
@@ -71,7 +74,7 @@ for i = 1:NumIter
         TransmittedPacket = [PilotSym;DataSym];
         
         % Received frame
-        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,2);
+        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,NumCSV);
         
         % Channel Estimation
         wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -80,11 +83,15 @@ for i = 1:NumIter
         EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
         EstChanLS = cell2mat(squeeze(EstChanLSCell));
         
+        plotCSI(EstChanLS,'CSI Ground Truth',NumCSV,['m','c']);
+        
         [feature,result,DimFeature,NumTestingSample] = ...
         getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
         featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
         resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
+        
+        % plotNormCSI(resultVec',NumCSV);
         
         XTest = featureVec.';
         
@@ -100,9 +107,10 @@ for i = 1:NumIter
         
         %% 2. CSI Prediction
         YPred = predict(Net,XTest,'MiniBatchSize',MiniBatchSize);
-        plotCSI(YPred,resultVec',Eb_N0_dB(snr));
-        EsChanGRU = CSIConverter(YPred,NumTestingSample);
-        SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EsChanGRU,Mod_Constellation,Label,DataLabel);
+        plotPredAndValidCSI(YPred,resultVec',NumCSV,Eb_N0_dB(snr));
+        EstChanGRU = CSIConverter(YPred,NumTestingSample);
+        plotCSI(EstChanGRU,'CSI Channel Prediction',NumCSV,['r','b']);
+        SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EstChanGRU,Mod_Constellation,Label,DataLabel);
     end
     
 end
@@ -148,12 +156,12 @@ function EstChanGRU = CSIConverter(PredictedCSI,NumTestingSample)
 
 end
 
-function RMSE = getRMSE(YPred, YValid)
-    predict = cell2mat(YPred);
-    valid = cell2mat(YValid);
-    MSE = mean((predict-valid).^2);
-    RMSE = sqrt(MSE);
-end
+% function RMSE = getRMSE(YPred, YValid)
+%     predict = cell2mat(YPred);
+%     valid = cell2mat(YValid);
+%     MSE = mean((predict-valid).^2);
+%     RMSE = sqrt(MSE);
+% end
 
 
 
