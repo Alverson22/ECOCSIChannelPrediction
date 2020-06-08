@@ -70,7 +70,7 @@ idxSC = 26;
 NumPacket = 10000; % Number of packets per LEO track
 
 % Training time step length
-TrainingTimeStep = 100;
+TrainingTimeStep = 50;
 
 % Prediction time step length
 PredictTimeStep = 1;
@@ -106,11 +106,12 @@ TransmittedPacket = [PilotSym;DataSym];
 % Mode = SN, CSI signal followed by noise
 Mode = 'S';
 % Select CSI File
-NumCSV = [1 2];
+CSV = [1];
+NumCSV = length(CSV);
 
 for n = NumCSV
     % Received frame
-    ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,n);
+    ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar(n),n);
 
     % LS Channel Estimation
     wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -156,5 +157,5 @@ YValid = Y(NumSample*TrainSize+1:end);
 
 save('TrainingData.mat','XTrain','YTrain','TrainingTimeStep','DimFeature');
 save('ValidationData.mat','XValid','YValid');
-save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','Mode','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
+save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','NumCSV','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','Mode','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
 

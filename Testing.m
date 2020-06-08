@@ -32,7 +32,7 @@ NumPath = length(h);
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
 
-Eb_N0_dB = Eb_N0_dB_MAX-25:2:Eb_N0_dB_MAX-10; % Es/N0 in dB
+Eb_N0_dB = Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
 NoiseVar = RcvrPower./Eb_N0;
@@ -53,7 +53,7 @@ NumIter = 1;
 SER_GRU = zeros(length(NoiseVar),NumIter);
 
 % Testing LEO Track CSV number
-NumCSV = 3;
+NumCSV = 1;
 
 for i = 1:NumIter
     
@@ -74,7 +74,7 @@ for i = 1:NumIter
         TransmittedPacket = [PilotSym;DataSym];
         
         % Received frame
-        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar,NumCSV);
+        ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,noiseVar,NumCSV);
         
         % Channel Estimation
         wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -90,8 +90,6 @@ for i = 1:NumIter
     
         featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
         resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
-        
-        % plotNormCSI(resultVec',NumCSV);
         
         XTest = featureVec.';
         
@@ -119,6 +117,8 @@ SER_GRU = mean(SER_GRU,2).';
 
 figure();
 semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
+% plot(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
+% ylim([0 1]);
 legend('Gate Reccurnet Units (GRU)');
 xlabel('Es/N0 (dB)');
 ylabel('Symbol error rate (SER)');

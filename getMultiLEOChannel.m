@@ -1,4 +1,4 @@
-function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,NoiseVar,n)
+function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,NoiseVar,NumCSV)
 % This function is to model the transmission and reception process in OFDM systems. 
 
 % Extract parameters
@@ -6,17 +6,17 @@ function ReceivedPacket = getMultiLEOChannel(TransmittedFrame,LengthCP,h,NoiseVa
 load('SatChannelParam.mat');
 %% Extract data
 
-FSPL = cell2mat(FSPL(n));
-AAngle = cell2mat(AAngle(n));
-EAngle = cell2mat(EAngle(n));
-DShift = cell2mat(DShift(n));
+PL = cell2mat(PL(NumCSV));
+AAngle = cell2mat(AAngle(NumCSV));
+EAngle = cell2mat(EAngle(NumCSV));
+DShift = cell2mat(DShift(NumCSV));
 
 %% Transmitter
 
 % Channel model h(t) = h1(FPSL) x h2(Markov) x h3(small-scale fading)
 % Phase shift effect with frequency Doppler shift
 PhaseShift = exp(-1j*(AAngle(1:NumPacket)+DShift(1:NumPacket)*1e-2)*2*pi); % Phase Shift (inlcude Doppler effect)
-isLOS = false; % Line Of Sight will be random in the realistic environment
+isLOS = true; % Line Of Sight will be random in the realistic environment
 
 for p = 1:NumPacket
                                   
@@ -31,8 +31,8 @@ for p = 1:NumPacket
     x = x2(:);
     
     % 4. Adding Free Space Path loss and Shadow Fading
-    % pathloss = FSPL(p) - AGain;
-    pathloss = FSPL(p) + SFMrkv(EAngle(p), isLOS) - AGain;
+    % pathloss = PL(p) - AGain;
+    pathloss = PL(p) + SFMrkv(EAngle(p), isLOS) - AGain;
     variance = 10^(-pathloss/10);
     h_PL = sqrt(variance/2) * h;
     
@@ -45,7 +45,7 @@ end
 
 SeqLength = size(y,1);
 
-NoiseF = sqrt(NoiseVar(n)/2).*(randn(NumPacket,NumSC)+1j*randn(NumPacket,NumSC)); % Frequency-domain noise
+NoiseF = sqrt(NoiseVar/2).*(randn(NumPacket,NumSC)+1j*randn(NumPacket,NumSC)); % Frequency-domain noise
 NoiseT = sqrt(SeqLength)*sqrt(SeqLength/NumSC)*ifft(NoiseF,SeqLength,2); % Time-domain noise
 NoiseT = NoiseT.';
 % Adding noise
