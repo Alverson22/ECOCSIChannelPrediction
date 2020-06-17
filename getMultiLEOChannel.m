@@ -14,9 +14,10 @@ DShift = cell2mat(DShift(NumCSV));
 %% Transmitter
 
 % Channel model h(t) = h1(FPSL) x h2(Markov) x h3(small-scale fading)
+
 % Phase shift effect with frequency Doppler shift
-PhaseShift = exp(-1j*(AAngle(1:NumPacket)+DShift(1:NumPacket)*1e-2)*2*pi); % Phase Shift (inlcude Doppler effect)
-isLOS = true; % Line Of Sight will be random in the realistic environment
+PhaseShift = exp(-1j*(AAngle(1:NumPacket)+DShift(1:NumPacket)*1e-2)*2*pi); % Phase Shift (including Doppler effect)
+isLOS = false; % Line Of Sight will be random in the realistic environment
 
 for p = 1:NumPacket
                                   

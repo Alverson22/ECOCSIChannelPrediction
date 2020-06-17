@@ -5,7 +5,7 @@ function plotPredAndValidCSI(YPred,YValid,Trace,snr)
     subplot(1,2,1);
     plot(1:size(y,1)/2,y(1:2:end),'r','LineWidth',1); hold on;
     plot(1:size(y,1)/2,y(2:2:end),'b','LineWidth',1); hold off;
-    title(strcat('Norm CSI Channel Prediction of LEO Trace',{' '},num2str(Trace)));
+    title(strcat('Norm CSI Channel Prediction of LEO Track',{' '},num2str(Trace)));
     xlabel('Time(ms)');
     ylabel('CSI Value');
     legend({'Real (CSI)','Imag (CSI)'},'Location','southwest');
@@ -15,7 +15,7 @@ function plotPredAndValidCSI(YPred,YValid,Trace,snr)
     subplot(1,2,2);
     plot(1:size(y,1)/2,y(1:2:end),'m','LineWidth',1); hold on;
     plot(1:size(y,1)/2,y(2:2:end),'c','LineWidth',1); hold off;
-    title(strcat('Norm CSI Ground Truth of LEO Trace',{' '},num2str(Trace)));
+    title(strcat('Norm CSI Ground Truth of LEO Track',{' '},num2str(Trace)));
     xlabel('Time(ms)');
     ylabel('CSI Value');
     legend({'Real (CSI)','Imag (CSI)'},'Location','southwest');

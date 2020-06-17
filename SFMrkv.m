@@ -19,9 +19,9 @@ transProb = [0.996402 0.003375 0.000233;
              0.002668 0.013607 0.983725];
          
 % LOS Shadow Fading in Ka-band (dB)
-SFLOS = [1.9 1.6 1.9 2.3 2.7 3.1 3.0 3.6 0.4; % good state in suburban and rural
-         4 4 4 4 4 4 4 4 4;                   % moderate state in urban scenario
-         2.9 2.4 2.7 2.4 2.4 2.7 2.6 2.8 0.6];% bad state in dense urban scenario
+SFLOS = [1.9 1.6 1.9 2.3 2.7 3.1 3.0 3.6 0.4;           % good state in suburban and rural
+         4 4 4 4 4 4 4 4 4;                             % moderate state in urban scenario
+         2.9 2.4 2.7 2.4 2.4 2.7 2.6 2.8 0.6];          % bad state in dense urban scenario
 
 % NLOS Shadow Fading in Ka-band (dB)
 SFNLOS = [10.7 10.0 11.2 11.6 11.8 10.8 10.8 10.8 10.8; % good state in suburban and rural

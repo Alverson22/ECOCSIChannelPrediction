@@ -67,10 +67,10 @@ idxSC = 26;
 %% Training data generation
 
 % Size of dataset to be defined
-NumPacket = 10000; % Number of packets per LEO track
+NumPacket = 3000; % Number of packets per LEO track
 
 % Training time step length
-TrainingTimeStep = 50;
+TrainingTimeStep = 30;
 
 % Prediction time step length
 PredictTimeStep = 1;
@@ -82,6 +82,7 @@ X = []; % Data
 Y = []; % Data with time shift
 
 %% Simulation
+
 % Pilot symbols - Fixed during the whole transmission
 FixedPilot = sqrt(PowerVar/2)*complex(sign(rand(1,NumPilot)-0.5),sign(rand(1,NumPilot)-0.5)); 
 % Same pilot sequences used in all packets
@@ -102,6 +103,7 @@ DataSym = sqrt(PowerVar/2)*complex(sign(rand(NumDataSym,NumSC,NumPacket)-0.5),si
 TransmittedPacket = [PilotSym;DataSym];
 
 %% Get training feature 
+
 % Mode = S, only CSI signal
 % Mode = SN, CSI signal followed by noise
 Mode = 'S';
@@ -109,7 +111,7 @@ Mode = 'S';
 CSV = [1];
 NumCSV = length(CSV);
 
-for n = NumCSV
+for n = CSV
     % Received frame
     ReceivedPacket = getMultiLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar(n),n);
 
@@ -120,9 +122,9 @@ for n = NumCSV
     EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
     EstChanLS = cell2mat(squeeze(EstChanLSCell));
     
-    % plotCSI(EstChanLS,n);
+    plotCSI(EstChanLS,'CSI Ground Truth',n,['m','c'],Eb_N0_dB(n));
     
-    % CSI feature extraction will normalize orginal CSI value
+    % Normalizing orginal CSI value as CSI feature
     [feature,result,DimFeature,NumTrainingSample] = ...
         getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
     
@@ -131,11 +133,12 @@ for n = NumCSV
     X = [X featureVec];
     Y = [Y resultVec]; 
     
-    % plotNormCSI(resultVec',NumCSV);
+    % plotNormCSI(resultVec','CSI Ground Truth',n,['m','c'],Eb_N0_dB(n));
     
 end
 
 %% Training Data Collection
+
 % Re-organize the dataset
 X = X.';
 Y = Y.';

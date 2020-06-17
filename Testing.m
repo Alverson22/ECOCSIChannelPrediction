@@ -31,7 +31,7 @@ NumPath = length(h);
 
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
-
+ 
 Eb_N0_dB = Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
@@ -39,7 +39,7 @@ NoiseVar = RcvrPower./Eb_N0;
 
 %% Testing data size
 
-NumPacket = 20000; % Number of packets simulated per iteration
+NumPacket = 10000; % Number of packets simulated per iteration
 
 %% Simulation
 
@@ -56,9 +56,7 @@ SER_GRU = zeros(length(NoiseVar),NumIter);
 NumCSV = 1;
 
 for i = 1:NumIter
-    
     for snr = 1:length(NoiseVar)
-        
         %% 1. Testing data generation
         
         noiseVar = NoiseVar(snr);
@@ -83,7 +81,7 @@ for i = 1:NumIter
         EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
         EstChanLS = cell2mat(squeeze(EstChanLSCell));
         
-        plotCSI(EstChanLS,'CSI Ground Truth',NumCSV,['m','c']);
+        % plotCSI(EstChanLS,'CSI Ground Truth',NumCSV,['m','c'],Eb_N0_dB(snr));
         
         [feature,result,DimFeature,NumTestingSample] = ...
         getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
@@ -94,36 +92,37 @@ for i = 1:NumIter
         XTest = featureVec.';
         
         % Collect the data labels for the selected subcarrier
-        DataLabel = zeros(size(DataSym(:,idxSC,TrainingTimeStep+1:end)));
+        DataLabel = zeros(size(DataSym(:,idxSC,TrainingTimeStep+PredictTimeStep:end)));
         for c = 1:NumClass
-            DataLabel(logical(DataSym(:,idxSC,TrainingTimeStep+1:end) == sqrt(PowerVar/2)*Mod_Constellation(c))) = Label(c);
+            DataLabel(logical(DataSym(:,idxSC,TrainingTimeStep+PredictTimeStep:end) == sqrt(PowerVar/2)*Mod_Constellation(c))) = Label(c);
         end
         DataLabel = squeeze(DataLabel); 
 
         % Data symbol collection
-        ReceivedDataSymbol = ReceivedPacket(2,idxSC,TrainingTimeStep+1:end);
+        ReceivedDataSymbol = ReceivedPacket(2,idxSC,TrainingTimeStep+PredictTimeStep:end);
         
-        %% 2. CSI Prediction
+        %% 2. RNN CSI Prediction
         YPred = predict(Net,XTest,'MiniBatchSize',MiniBatchSize);
-        plotPredAndValidCSI(YPred,resultVec',NumCSV,Eb_N0_dB(snr));
+        % plotPredAndValidCSI(YPred,resultVec',NumCSV,Eb_N0_dB(snr));
         EstChanGRU = CSIConverter(YPred,NumTestingSample);
-        plotCSI(EstChanGRU,'CSI Channel Prediction',NumCSV,['r','b']);
+        % plotCSI(EstChanGRU,'CSI Channel Prediction',NumCSV,['r','b'],Eb_N0_dB(snr));
         SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EstChanGRU,Mod_Constellation,Label,DataLabel);
     end
-    
 end
 
 SER_GRU = mean(SER_GRU,2).';
 
 figure();
-semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
-% plot(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
-% ylim([0 1]);
+% semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
+plot(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
+title('Data Detection');
 legend('Gate Reccurnet Units (GRU)');
 xlabel('Es/N0 (dB)');
 ylabel('Symbol error rate (SER)');
+ax = gca;
+ax.YRuler.Exponent = 0;
 
-%% 
+%% Detection Functions
 
 function SER = getSymbolDetection(ReceivedData,EstChan,Mod_Constellation,Label,DataLabel)
 % This function is to calculate the symbol error rate from the equalized
@@ -144,6 +143,7 @@ end
 
 function EstChanGRU = CSIConverter(PredictedCSI,NumTestingSample)
 % This function is to reconstruct and denormalized the CSI from GRU prediction to complex-valued
+
     load('Normalized.mat');
     EstChanGRU = zeros(NumTestingSample,1);
     CSI = cell2mat(PredictedCSI);
@@ -155,12 +155,14 @@ function EstChanGRU = CSIConverter(PredictedCSI,NumTestingSample)
     end
 
 end
-
+ 
 % function RMSE = getRMSE(YPred, YValid)
+% 
 %     predict = cell2mat(YPred);
 %     valid = cell2mat(YValid);
 %     MSE = mean((predict-valid).^2);
 %     RMSE = sqrt(MSE);
+% 
 % end
 
 
