@@ -22,14 +22,14 @@ MiniBatchSize = 300;
 MaxEpochs = 50;
 NumFeature = DimFeature;
 InputSize = NumFeature*TrainingTimeStep;
-NumHiddenUnits = 64;
+NumHiddenUnits = 32;
 NumResponses = 2;
 
 %% Form RNN layers
 
 Layers = [ ...
     sequenceInputLayer(InputSize)
-    gruLayer(NumHiddenUnits,'OutputMode','sequence')
+    gruLayer(NumHiddenUnits,'OutputMode','sequence','StateActivationFunction','tanh')
     dropoutLayer(0.2)
     fullyConnectedLayer(NumResponses)
     regressionLayer];
