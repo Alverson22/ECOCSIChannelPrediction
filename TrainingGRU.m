@@ -18,8 +18,8 @@ load('ValidationData.mat');
 
 %% Define training parameters
 
-MiniBatchSize = 300;
-MaxEpochs = 50;
+MiniBatchSize = 100;
+MaxEpochs = 1;
 NumFeature = DimFeature;
 InputSize = NumFeature*TrainingTimeStep;
 NumHiddenUnits = 32;
@@ -30,7 +30,6 @@ NumResponses = 2;
 Layers = [ ...
     sequenceInputLayer(InputSize)
     gruLayer(NumHiddenUnits,'OutputMode','sequence','StateActivationFunction','tanh')
-    dropoutLayer(0.2)
     fullyConnectedLayer(NumResponses)
     regressionLayer];
 

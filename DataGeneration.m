@@ -11,7 +11,7 @@
 
 %% Clear workspace
 
-clear all;
+clear variables;
 close all;
 
 
@@ -32,7 +32,6 @@ LengthCP = 16; % The length of the cyclic prefix
 % writer's own implementation, which is saved and loaded:
 load('SavedChan.mat'); 
 load('NoiseParam.mat');
-% load('DataIteration.mat');
 
 % One can replace the 3GPP channel with the narrowband Rayleigh fading channel:  
 % h = 1/sqrt(2)*complex(randn(NumPath,1),randn(NumPath,1)); 
@@ -44,6 +43,7 @@ H = fft(h,NumSC,1);
 TransmitterPower_dB = 60; % dBm
 LNAGain_dB = 35; % dBm
 PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
+% PowerVar = 10^(TransmitterPower_dB/10);
 
 %% SNR calculation
 
@@ -67,13 +67,13 @@ idxSC = 26;
 %% Training data generation
 
 % Size of dataset to be defined
-NumPacket = 45000; % Number of packets per LEO track
+NumPacket = 100; % Number of packets per LEO track
 
 % Training time step length
-TrainingTimeStep = 30;
+TrainingTimeStep = 1;
 
 % Prediction time step length
-PredictTimeStep = 1;
+PredictTimeStep = 50;
 
 % Training data shift length
 TrainingDataInterval = 1;
@@ -105,15 +105,22 @@ TransmittedPacket = [PilotSym;DataSym];
 %% Get training feature 
 
 % Mode = S, only CSI signal
-% Mode = SN, CSI signal followed by noise
-Mode = 'S';
+% Mode = SN, CSI signal with noise feature
+% Mode = SE, CSI singal with Elevation Angle
+Mode = 'SE';
+
+% Scenario = 1, Suburban and rural scenario
+% Scenario = 2, Urban scenario
+% Scenario = 3, Dense urban scenario
+Scenario = 1;
+
 % Select CSI File
 CSV = [1];
 NumCSV = length(CSV);
 
 for n = CSV
     % Received frame
-    ReceivedPacket = getLEOChannel(TransmittedPacket,LengthCP,h,NoiseVar(n),n);
+    ReceivedPacket = getLEOChannel(Scenario,TransmittedPacket,LengthCP,h,NoiseVar(n),n);
 
     % LS Channel Estimation
     wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);
@@ -122,11 +129,12 @@ for n = CSV
     EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
     EstChanLS = cell2mat(squeeze(EstChanLSCell));
     
-    plotCSI(EstChanLS,'CSI Ground Truth',n,['r','b'],Eb_N0_dB(n));
+    % plotCSIEAngle(EstChanLS,'CSI',n,['m','c'],Eb_N0_dB(n),n);
+    plotCSI(EstChanLS,'CSI',n,['m','c'],Eb_N0_dB(n));
     
     % Normalizing orginal CSI value as CSI feature
     [feature,result,DimFeature,NumTrainingSample] = ...
-        getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC);
+        getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC,n);
     
     featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
     resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));

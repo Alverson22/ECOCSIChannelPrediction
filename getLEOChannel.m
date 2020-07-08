@@ -1,4 +1,4 @@
-function ReceivedPacket = getLEOChannel(TransmittedFrame,LengthCP,h,NoiseVar,NumCSV)
+function ReceivedPacket = getLEOChannel(Scenario,TransmittedFrame,LengthCP,h,NoiseVar,NumCSV)
 % This function is to model the transmission and reception process in OFDM systems. 
 
 % Extract parameters
@@ -16,6 +16,7 @@ EAngle = cell2mat(EAngle(NumCSV));
 
 % Phase shift effect with frequency Doppler shift
 PhaseShift = exp(-1j*(AAngle(1:NumPacket))*2*pi); % Phase Shift (including Doppler effect, fd=1/2pi*phi/deltat, phi denotes the phase shift)
+% plotPhase(PhaseShift);
 isLOS = false; % Line Of Sight will be random in the realistic environment
 
 for p = 1:NumPacket
@@ -32,7 +33,7 @@ for p = 1:NumPacket
     
     % 4. Adding Free Space Path loss and Shadow Fading
     % pathloss = PL(p) - AGain;
-    pathloss = PL(p) + SFMrkv(EAngle(p), isLOS) - AGain;
+    pathloss = PL(p) + SF(Scenario, EAngle(p)) - AGain;
     variance = 10^(-pathloss/10);
     h_PL = sqrt(variance/2) * h;
     

@@ -5,7 +5,7 @@
 %% Clear workspace
 
 clear all;
-% close all;
+close all;
 
 %% Number of dataset
 
@@ -33,15 +33,26 @@ for n = 1:NumCSV
     Eb_N0_dB{n} =  mean(LinkInformation.Eb_No_dB_);                         % dB, SNR
     RcvrPower_dB{n} = mean(LinkInformation.CarrierPowerAtRcvrInput_dBm_);   % dB, Receiver Carrier Power
     DShift = LinkInformation.Freq_DopplerShift_Hz_' / 1e9;                  % GHz, Doppler Shift
+    RainLoss = LinkInformation.RainLoss_dB_';                               % dB, Rain Loss
+    CloudLoss = LinkInformation.CloudsFogLoss_dB_';                         % dB, Cloud Loss
     Range = LinkInformation.Range_km_' * 1e3;                               % m, Slant Range
-    PL{n} = 32.45 + 20*log10(Fc+DShift) + 20*log10(Range);                  % dB, Propagation Loss, fc Ghz, d meter
+    PL{n} = 32.45 + 20*log10(Fc+DShift) + 20*log10(Range) + RainLoss;                  % dB, Propagation Loss, fc Ghz, d meter
     AAngleInfo = LinkInformation.RcvrAzimuth_deg_';                         % deg Azimuth Angle (Excluding Doppler Shift)
     AAngle{n} = mod((AAngleInfo + 360), 360) / 360;                         % Format in 2pi
     EAngleInfo = LinkInformation.RcvrElevation_deg_';                       % deg Elevation Angle
     EAngle{n} = mod(abs(EAngleInfo-90), 90);
+    
+%     figure();
+%     plot(1:45000,mod((AAngleInfo(1:45000) + 360), 360),'r-o','LineWidth',1);
+%     title('Phase Shift');
+%     legend('Phase Angle');
+%     xlabel('Symbol Index');
+%     ylabel('Angle (deg)');
+%     ylim([0 360])
 end
 
 %% Save Satellite Parameters
 
 save('SatChannelParam.mat', 'EIRP', 'AGain', 'Fc', 'PL', 'AAngle', 'EAngle');
 save('NoiseParam.mat','Eb_N0_dB', 'RcvrPower_dB');
+save('EAngle.mat','EAngle');
