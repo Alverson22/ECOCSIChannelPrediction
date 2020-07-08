@@ -32,7 +32,7 @@ NumPath = length(h);
 Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
 RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
  
-Eb_N0_dB = Eb_N0_dB_MAX-20;% Eb_N0_dB_MAX-40:2:Eb_N0_dB_MAX-20; % Es/N0 in dB
+Eb_N0_dB = Eb_N0_dB_MAX-40:2:Eb_N0_dB_MAX-20; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
 NoiseVar = RcvrPower./Eb_N0;
@@ -79,7 +79,7 @@ for i = 1:NumIter
         TransmittedPacket = [PilotSym;DataSym];
         
         % Received frame
-        ReceivedPacket = getLEOChannel(TransmittedPacket,LengthCP,h,noiseVar,NumCSV);
+        ReceivedPacket = getLEOChannel(Scenario,TransmittedPacket,LengthCP,h,noiseVar,NumCSV);
         
         % Channel Estimation
         wrapper = @(x,y) lsChanEstimation(x,y,NumPilot,NumSC,idxSC);

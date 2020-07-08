@@ -42,8 +42,8 @@ H = fft(h,NumSC,1);
 
 TransmitterPower_dB = 60; % dBm
 LNAGain_dB = 35; % dBm
-PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
-% PowerVar = 10^(TransmitterPower_dB/10);
+% PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
+PowerVar = 10^(TransmitterPower_dB/10);
 
 %% SNR calculation
 
@@ -67,7 +67,7 @@ idxSC = 26;
 %% Training data generation
 
 % Size of dataset to be defined
-NumPacket = 100; % Number of packets per LEO track
+NumPacket = 45000; % Number of packets per LEO track
 
 % Training time step length
 TrainingTimeStep = 1;
@@ -168,5 +168,5 @@ YValid = Y(NumSample*TrainSize+1:end);
 
 save('TrainingData.mat','XTrain','YTrain','TrainingTimeStep','DimFeature');
 save('ValidationData.mat','XValid','YValid');
-save('SimParameters.mat','NumPilotSym','NumDataSym','NumSC','NumCSV','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','Mode','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
+save('SimParameters.mat','Scenario','NumPilotSym','NumDataSym','NumSC','NumCSV','TrainingTimeStep','PredictTimeStep','TrainingDataInterval','Mode','idxSC','h','LengthCP','FixedPilot','PowerVar'); 
 
