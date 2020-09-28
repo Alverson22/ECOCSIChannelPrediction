@@ -30,7 +30,7 @@ NumPath = 20;
 LengthCP = 16; % The length of the cyclic prefix
 % The channel matrix generated using the 3GPP TR38.901 channel model of the
 % writer's own implementation, which is saved and loaded:
-load('SavedChan.mat'); 
+load('SavedChan.mat');  
 load('NoiseParam.mat');
 
 % One can replace the 3GPP channel with the narrowband Rayleigh fading channel:  
@@ -42,8 +42,8 @@ H = fft(h,NumSC,1);
 
 TransmitterPower_dB = 60; % dBm
 LNAGain_dB = 35; % dBm
-% PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
 PowerVar = 10^(TransmitterPower_dB/10);
+% PowerVar = 10^((TransmitterPower_dB+LNAGain_dB)/10);
 
 %% SNR calculation
 
@@ -70,10 +70,10 @@ idxSC = 26;
 NumPacket = 45000; % Number of packets per LEO track
 
 % Training time step length
-TrainingTimeStep = 1;
+TrainingTimeStep = 10;
 
 % Prediction time step length
-PredictTimeStep = 50;
+PredictTimeStep = 12;
 
 % Training data shift length
 TrainingDataInterval = 1;
@@ -105,8 +105,7 @@ TransmittedPacket = [PilotSym;DataSym];
 %% Get training feature 
 
 % Mode = S, only CSI signal
-% Mode = SN, CSI signal with noise feature
-% Mode = SE, CSI singal with Elevation Angle
+% Mode = SE, training model with CSI and Elevation angle
 Mode = 'SE';
 
 % Scenario = 1, Suburban and rural scenario
@@ -128,22 +127,24 @@ for n = CSV
     PilotSeq = mat2cell(FixedPilotAll,1,NumPilot,ones(1,NumPacket));
     EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
     EstChanLS = cell2mat(squeeze(EstChanLSCell));
-    
-    % plotCSIEAngle(EstChanLS,'CSI',n,['m','c'],Eb_N0_dB(n),n);
-    plotCSI(EstChanLS,'CSI',n,['m','c'],Eb_N0_dB(n));
-    
+
+    % Plot CSI ground truth
+    plotCSIEAngle(EstChanLS,'CSI',['r','b'],Eb_N0_dB(n),n);
+    % plotCSI(EstChanLS,'CSI',n,['m','c'],Eb_N0_dB(n));
+
     % Normalizing orginal CSI value as CSI feature
     [feature,result,DimFeature,NumTrainingSample] = ...
         getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC,n);
-    
+
     featureVec = mat2cell(feature,size(feature,1),ones(1,size(feature,2)));
     resultVec = mat2cell(result,size(result,1),ones(1,size(result,2)));
     X = [X featureVec];
     Y = [Y resultVec]; 
-    
+
     % plotNormCSI(resultVec','CSI Ground Truth',n,['m','c'],Eb_N0_dB(n));
-    
+
 end
+
 
 %% Training Data Collection
 
@@ -155,7 +156,8 @@ Y = Y.';
 TrainSize = 4/5;
 ValidSize = 1/5;
 
-NumSample = NumTrainingSample * length(NumCSV);
+% NumSample = NumTrainingSample * length(NumCSV);
+NumSample = NumTrainingSample;
 
 % Training data
 XTrain = X(1:NumSample*TrainSize);

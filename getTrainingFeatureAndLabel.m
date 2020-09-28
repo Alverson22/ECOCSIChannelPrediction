@@ -1,4 +1,4 @@
-function [feature,result,DimFeature,NumTrainingSample] = getTrainingFeatureAndLabel(Mode,RealData,ImagData,TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC,n)
+function [feature,result,DimFeature,NumTrainingSample] = getTrainingFeatureAndLabel(Mode,RealData,ImagData,TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC,NumCSV)
 % This function is to
 %   1. transform the received OFDM packets to feature vectors for training
 %      data collection;
@@ -36,7 +36,7 @@ elseif Mode == 'SE'
     
     % Load pre-defined Gaussian noise
     load("EAngle.mat");
-    EAngle = cell2mat(EAngle(n)) ./ 90 ;
+    EAngle = cell2mat(EAngle(NumCSV)) ./ 90 ;
     
     % Feature vector
     DimFeature = 3;

@@ -23,8 +23,13 @@ SFLOS = [1.9 1.6 1.9 2.3 2.7 3.1 3.0 3.6 0.4;               % suburban and rural
 
 % NLOS Shadow Fading in Ka-band (dB)
 SFNLOS = [10.7 10.0 11.2 11.6 11.8 10.8 10.8 10.8 10.8;     % suburban and rural scenario
-          6 6 6 6 6 6 6 6 6;                                % urban scenario
+          12 12 12 12 12 12 12 12 12;                                % urban scenario
           17.1 17.1 15.6 14.6 14.2 12.6 12.1 12.3 12.3;];   % dense urban scenario
+
+% NLOS Clutter Loss in Ka-band (dB)
+CL = [29.5 24.6 21.9 20.0 18.7 17.8 17.2 16.9 16.8;         % suburban and rural scenario
+      44.3 39.9 37.5 35.8 34.6 33.8 33.3 33.0 32.9;         % urban scenario
+      44.3 39.9 37.5 35.8 34.6 33.8 33.3 33.0 32.9;];       % dense urban scenario
          
 % Elevation Angle offset
 EAngleOffset = fix(EAngle/10) + 1;
@@ -39,6 +44,8 @@ else
         currentLOSState = LOSState.NLOS;
         fprintf("NLOS %d\n",EAngleOffset-1)
 end
+
+% currentLOSState = LOSState.LOS;
 
 if currentLOSState == LOSState.LOS
     ShadowFading = SFLOS(Scenario,EAngleOffset);

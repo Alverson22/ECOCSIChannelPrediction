@@ -13,6 +13,7 @@ close all;
 
 load('SimParameters.mat');
 load('TrainedNet.mat');
+% load('net\sunny\NPNet.mat');
 load('NoiseParam.mat');
 
 %% Other simulation parameters
@@ -29,10 +30,14 @@ NumPath = length(h);
 
 %% SNR caculation
 
-Eb_N0_dB_MAX = max(cell2mat(Eb_N0_dB));
-RcvrPower_dB_MAX = max(cell2mat(RcvrPower_dB));
+% Testing LEO Track CSV number
+NumCSV = 2;
+
+Eb_N0_dB_MAX = cell2mat(Eb_N0_dB(NumCSV));
+RcvrPower_dB_MAX = cell2mat(RcvrPower_dB(NumCSV));
  
-Eb_N0_dB = Eb_N0_dB_MAX-40:2:Eb_N0_dB_MAX-20; % Es/N0 in dB
+% Eb_N0_dB = Eb_N0_dB_MAX;
+Eb_N0_dB = Eb_N0_dB_MAX-20:2:Eb_N0_dB_MAX; % Es/N0 in dB
 Eb_N0 = 10.^(Eb_N0_dB./10);
 RcvrPower = 10.^(RcvrPower_dB_MAX./10);
 NoiseVar = RcvrPower./Eb_N0;
@@ -46,24 +51,18 @@ NumPacket = 45000; % Number of packets simulated per iteration
 % Same pilot sequences used in training and testing stages
 FixedPilotAll = repmat(FixedPilot,1,1,NumPacket); 
 
-% Predict Time Step
-% predictTimeStep = [1 2 3 4 5 6 7 8 9 10];
-
 % Number of Monte-Carlo iterations
 NumIter = 1;
 
 % Initialize error rate vectors
 SER_GRU = zeros(length(NoiseVar),NumIter);
-% SER_GRU = zeros(length(predictTimeStep),NumIter);
-
-% Testing LEO Track CSV number
-NumCSV = 1;
+NMSE_GRU = zeros(length(NoiseVar),NumIter);
 
 % f = waitbar(1/NumIter,sprintf('Operating iteration %d/%d',i,length(Eb_N0_dB)),'Name','Processing Channel Prediction...');
 
 for i = 1:NumIter
-    % for PredictTimeStep = 1:length(predictTimeStep)
-    for snr = 1:length(NoiseVar)
+%    for PredictTimeStep = predictTimeStep
+     for snr = 1:length(NoiseVar)
 %        waitbar(snr/length(NoiseVar),f,sprintf('Operating iteration %d/%d',snr,length(NoiseVar)));
         %% 1. Testing data generation
         noiseVar = NoiseVar(snr);
@@ -88,8 +87,9 @@ for i = 1:NumIter
         EstChanLSCell = cellfun(wrapper,ReceivedPilot,PilotSeq,'UniformOutput',false);
         EstChanLS = cell2mat(squeeze(EstChanLSCell));
         
-        plotCSI(EstChanLS(TrainingTimeStep+1:end),'CSI Ground Truth',NumCSV,['m','c'],Eb_N0_dB(snr));
+        % plotCSI(EstChanLS(TrainingTimeStep+1:end),'CSI Ground Truth',NumCSV,['m','c'],Eb_N0_dB(snr));
         
+        % load("GroundTruth.mat");
         [feature,result,DimFeature,NumTestingSample] = ...
             getTrainingFeatureAndLabel(Mode,real(EstChanLS),imag(EstChanLS),TrainingTimeStep,PredictTimeStep,TrainingDataInterval,idxSC,NumCSV);
     
@@ -112,36 +112,67 @@ for i = 1:NumIter
         YPred = predict(Net,XTest,'MiniBatchSize',MiniBatchSize);
         % plotPredAndValidCSI(YPred,resultVec',NumCSV,Eb_N0_dB(snr));
         EstChanGRU = CSIConverter(YPred,NumTestingSample);
-        plotCSI(EstChanGRU,'CSI Channel Prediction',NumCSV,['r','b'],Eb_N0_dB(snr));
+        % plotCSI(EstChanGRU,'CSI Channel Prediction',NumCSV,['r','b'],Eb_N0_dB(snr));
         SER_GRU(snr,i) = getSymbolDetection(ReceivedDataSymbol,EstChanGRU,Mod_Constellation,Label,DataLabel);
-        RMSE = getRMSE(EstChanGRU,EstChanLS(PredictTimeStep+TrainingTimeStep:end));
-        % SER_GRU(PredictTimeStep,i) = getSymbolDetection(ReceivedDataSymbol,EstChanGRU,Mod_Constellation,Label,DataLabel);
+        % RMSE = getRMSE(EstChanGRU,EstChanLS(PredictTimeStep+TrainingTimeStep:end));
+        % plotCompare(EstChanLS,EstChanGRU,'CSI Comparison',[[0,0,0];[0.5,0.5,0.5];[0 0 1];[0.5 0.5 1]],Eb_N0_dB(snr),NumCSV)
+        NMSE_GRU(snr,i) = getNMSE(EstChanGRU,EstChanLS(PredictTimeStep+TrainingTimeStep:end));
     end
 end
+% SER_GRU = mean(SER_GRU,2).';
+NMSE_GRU = mean(NMSE_GRU,2).';
+% load("SERLSTM.mat");
+load("NMSELSTM.mat");
 
-% close(f);
-
-SER_GRU = mean(SER_GRU,2).';
-
-figure();
-semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
-% plot(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
-title('Data Detection');
-legend('Gate Reccurnet Units (GRU)');
-xlabel('Es/N0 (dB)');
-ylabel('Symbol error rate (SER)');
-ax = gca;
-ax.YRuler.Exponent = 0;
 
 % figure();
-% % semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);hold off;
-% plot(predictTimeStep,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
+% % semilogy(Eb_N0_dB,SER_LSTM,'r-o','LineWidth',1,'MarkerSize',8);hold on;
+% semilogy(Eb_N0_dB,SER_GRU,'b-o','LineWidth',1,'MarkerSize',8);hold on;
+% title('Rural Scenario','Interpreter','latex');
+% % legend('Self-Training','Interpreter','latex');
+% % legend('wrong prediction model');
+% % legend('Self-Training','Reusable','Interpreter','latex');
+% % legend('GRU with Elevation Angle','Interpreter','latex');
+% % legend('APF-RNS','Gate Recurrent Units (GRU)','GRU with Elevation Angle','Interpreter','latex');
+% legend('Training on Track 1 Predict on Track 2','Interpreter','latex');
+% xlabel('Eb/N0 (dB)');
+% ylabel('Symbol Error Rate (SER)');
+% % ax = gca;
+% % ax.YRuler.Exponent = 0;
+
+figure();
+% semilogy(Eb_N0_dB,NMSE_LSTM,'r-o','LineWidth',1,'MarkerSize',8);hold on;
+semilogy(Eb_N0_dB,NMSE_LSTM,'r-*','LineWidth',1,'MarkerSize',8);hold on;
+% semilogy(Eb_N0_dB,NMSE_GRU,'b-o','LineWidth',1,'MarkerSize',8);hold on;
+% semilogy(Eb_N0_dB,NMSE_GRU,'g-o','LineWidth',1,'MarkerSize',8);hold on;
+semilogy(Eb_N0_dB,NMSE_GRU,'g-*','LineWidth',1,'MarkerSize',8);hold on;
+% title('NMSE of Reusability on Different Sign of CSI','Interpreter','latex');
+title('Dense Urban Rainy Condition','Interpreter','latex');
+% legend('APF-RNS','Gate Recurrent Units (GRU)','Interpreter','latex');
+% legend('APF-RNS','Gate Recurrent Units (GRU)','GRU with Elevation Angle','Interpreter','latex');
+% legend('APF-RNS-Sunny','ECOCSI-Sunny','ECOCSI-Rainy','ECOCSI-Sunny-Rainy','APF-RNS-Sunny-Rainy','Interpreter','latex');
+legend('APF-RNS-Sunny-Rainy','ECOCSI-Sunny-Rainy','Interpreter','latex');
+% xlabel('Eb/N0 (dB)');
+% ylabel('Normalized Mean Square Error (NMSE)');
+
+% figure();
+% semilogy(NMSE(:,1),NMSE(:,2),'b-o','LineWidth',1,'MarkerSize',8);hold on;
+% title('NMSE of Reusable Model on Different Altitude','Interpreter','latex');
+% % legend('GRU LEO 500km','Interpreter','latex','Location','Northwest');
+% xlabel('Altitude (km)');
+% ylabel('Normalize Mean Square Error (NMSE)');
+
+
+% figure();
+% semilogy(Eb_N0_dB,SER_GRU,'r-o','LineWidth',2,'MarkerSize',10);
 % title('Data Detection');
 % legend('Gate Reccurnet Units (GRU)');
 % xlabel('Predict Index');
 % ylabel('Symbol error rate (SER)');
 % ax = gca;
 % ax.YRuler.Exponent = 0;
+
+% legend('Self-Training','Offline','Interpreter','latex');
 
 %% Detection Functions
 
@@ -179,11 +210,42 @@ end
  
 function RMSE = getRMSE(YPred, YValid)
 
-    Real = real(YPred) - real(YValid);
-    Imag = imag(YPred) - imag(YValid);
-    MSE = mean(Real.^2+Imag.^2);
-    RMSE = sqrt(MSE);
+    orgSig = zeros(size(YValid,1)*2,1);
+    recSig = zeros(size(YPred,1)*2,1);
+    
+    orgSig(1:2:end) = real(YValid);
+    orgSig(2:2:end) = imag(YValid);
+    recSig(1:2:end) = real(YPred);
+    recSig(2:2:end) = imag(YPred);
+    
+    RMSE = sqrt(mean((orgSig - recSig).^2));
 
+end
+
+function NMSE = getNMSE(YPred,YValid,varargin)
+    
+    orgSig = zeros(size(YValid,1)*2,1);
+    recSig = zeros(size(YPred,1)*2,1);
+    
+    orgSig(1:2:end) = real(YValid);
+    orgSig(2:2:end) = imag(YValid);
+    recSig(1:2:end) = real(YPred);
+    recSig(2:2:end) = imag(YPred);
+    
+    if isempty(varargin)
+        boun = 0;
+    else boun = varargin{1};
+    end
+    if size(orgSig,2)==1       % if signal is 1-D
+        orgSig = orgSig(boun+1:end-boun,:);
+        recSig = recSig(boun+1:end-boun,:);
+    else                       % if signal is 2-D or 3-D
+        orgSig = orgSig(boun+1:end-boun,boun+1:end-boun,:);
+        recSig = recSig(boun+1:end-boun,boun+1:end-boun,:);
+    end
+    MSE=norm(orgSig(:)-recSig(:))^2/length(orgSig(:));
+    sigEner=norm(orgSig(:))^2;
+    NMSE=(MSE/sigEner);
 end
 
 
